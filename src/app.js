@@ -20,4 +20,4 @@ mongoose.connect(process.env.MONGODB_URI)
 .then(()=>console.log('Connected to MongoDB'))
 .catch((err)=>res.json({message:err}))
 
-app.listen(PORT, '::' ,()=>{console.log('listening at port '+ PORT)})
+app.listen(PORT, '0.0.0.0' ,()=>{console.log('listening at port '+ PORT)})
