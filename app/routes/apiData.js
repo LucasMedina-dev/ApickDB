@@ -13,8 +13,9 @@ router.post('/apick', (req,res)=>{
 
 
 router.get('/apick', (req, res) => {
+    console.log(req.query)
     apiSchema
-    .find({})
+    .find(req.query)
     .then((data)=>{
         res.json(data)
     })
