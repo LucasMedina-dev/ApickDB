@@ -15,13 +15,13 @@ router.post('/login', (req, res) => {
     const user = userSchema.findOne({ username, password })
         .then((user)=> {
             if(user){
-                res.json({ message: 'Inicio de sesión exitoso' });
+                res.json({ flag: true });
             }else{
                 res.status(401).json({ error: 'Credenciales inválidas' });
             }
         })   
         .catch(()=>{
-            res.status(500).json({ error: 'Error en el servidor' });
+            res.status(500).json({ error: 'Error en el servidor perro' });
         })
 
 })

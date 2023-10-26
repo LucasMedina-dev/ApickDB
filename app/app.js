@@ -1,8 +1,8 @@
 const express= require('express');
 const mongoose=require('mongoose')
+const cors= require('cors')
 require('dotenv').config();
 const app= express();
-const hostname = "0.0.0.0";
 const port = process.env.port || 3000;
 
 //routes
@@ -12,15 +12,18 @@ const apiRoutes= require('./routes/apiData')
 
 //middleware
 app.use(express.json())
+app.use(express.urlencoded({extended:false}))
 app.use('/api', usersRoutes)
 app.use('/api', endpointRoutes)
 app.use('/api', apiRoutes)
 
+const whitelist=['localhost:4200','http://localhost:4200', 'https://localhost:4200','https://localhost:4200/']
+app.use(cors())
 
 mongoose.connect(process.env.MONGODB_URI)
 .then(()=>console.log('Connected to MongoDB'))
-.catch((err)=>res.json({message:err}))
+.catch((err)=>console.log("malio sal"))
 
-app.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
+app.listen(port, () => {
+  console.log(`Server running at ${port}`);
 });
