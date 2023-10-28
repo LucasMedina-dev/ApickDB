@@ -17,7 +17,6 @@ app.use('/api', usersRoutes)
 app.use('/api', endpointRoutes)
 app.use('/api', apiRoutes)
 
-const whitelist=['localhost:4200','http://localhost:4200', 'https://localhost:4200','https://localhost:4200/']
 app.use(cors())
 
 mongoose.connect(process.env.MONGODB_URI)
