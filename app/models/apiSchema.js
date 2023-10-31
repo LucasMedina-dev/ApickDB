@@ -7,7 +7,7 @@ const apiSchema= mongoose.Schema({
     description:{type:String, required:true},
     active:Boolean,
     valoration:Number,
-    endpoint:Array
+    endpoint:[mongoose.Schema.Types.Mixed]
 })
 
 module.exports= mongoose.model('apicks', apiSchema)
