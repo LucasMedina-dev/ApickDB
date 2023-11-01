@@ -23,7 +23,6 @@ router.get("/apick/:id/:endpoint", (req, res) => {
   apiSchema
     .find({ _id: id, "endpoint.endpoint": endpoint })
     .then((data) => {
-      console.log(data);
       const endpointContainsMethod = data[0].endpoint.find((e) =>
         e.methods.find((e) => e === "GET")
       );
