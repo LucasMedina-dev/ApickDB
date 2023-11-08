@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const apiSchema = require("../models/apiSchema");
 const endpointSchema = require("../models/endpointSchema");
+const { ObjectId } = require('mongodb');
 
 router.post("/apick", (req, res) => {
   const api = apiSchema(req.body);
@@ -21,7 +22,7 @@ router.get("/apick/:id/:endpoint", (req, res) => {
   const id = req.params.id;
   const endpoint = req.params.endpoint;
   apiSchema
-    .find({ _id: id, "endpoint.endpoint": endpoint })
+    .find({ _id: id, "endpoint.endpoint": endpoint, active:true })
     .then((data) => {
       const endpointContainsMethod = data[0].endpoint.find((e) =>
         e.methods.find((e) => e === "GET")
@@ -43,5 +44,19 @@ router.get("/apick/:id/:endpoint", (req, res) => {
       res.json(err);
     });
 });
+router.put("/apick/:id", (req, res) => {
+  const id = req.params.id;
+  const status = req.body.active;
+  const objectId = new ObjectId(id);
+  //console.log(objectId)
+  apiSchema
+  .updateOne(
+    { _id: objectId },
+    { $set: { active: status } }
+ ).then(()=>{
+    res.json({status:true})
+ })
+});
+
 
 module.exports = router;
