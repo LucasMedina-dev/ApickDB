@@ -43,11 +43,11 @@ router.get("/apick/:id/:endpoint", (req, res) => {
             res.json(err);
           });
       } else {
-        res.json({ message: "Recurso no permitido" });
+        res.json({ message: "denied request" });
       }
     })
     .catch(() => {
-      res.json({ message: "Recurso no permitido" });
+      res.json({ message: "denied request" });
     });
 });
 router.put("/apick/:id", (req, res) => {
@@ -56,8 +56,8 @@ router.put("/apick/:id", (req, res) => {
   const objectId = new ObjectId(id);
   apiSchema
     .updateOne({ _id: objectId }, { $set: { active: status } })
-    .then(() => {
-      res.json({ status: true });
+    .then((data) => {
+      res.json(data);
     });
 });
 router.delete("/apick", (req, res) => {
@@ -68,12 +68,12 @@ router.delete("/apick", (req, res) => {
       .then(() => {
         endpointSchema
           .deleteMany({ title: titleToDelete })
-          .then(() => res.json({ status: true }))
+          .then((data) => res.json(data))
           .catch((err) => res.json({ message: err }));
       })
       .catch((err) => res.json({ message: err }));
   } else {
-    res.json({ message: "Titulo no valido" });
+    res.json({ message: "not a valid title" });
   }
 });
 router.put("/apick", (req, res) => {
@@ -103,42 +103,10 @@ router.put("/apick", (req, res) => {
   const actualization = { $set: dataModified };
   apiSchema
     .updateOne({ title: originalTitle }, actualization)
-    .then(() => res.json({ status: true }))
+    .then((data) => res.json(data))
     .catch((err) => console.log("error" + err));
 });
 
-function createValidationRules(structure, parentKey = "") {
-  const rules = [];
-
-  for (const key in structure) {
-    const fullPath = parentKey ? `${parentKey}.${key}` : key;
-
-    if (typeof structure[key] === "object" && !Array.isArray(structure[key])) {
-      // Recursivamente manejar objetos anidados
-      rules.push(...createValidationRules(structure[key], fullPath));
-    } else {
-      // Validadores para propiedades individuales
-      rules.push(
-        body(fullPath)
-          .exists()
-          .custom((value) => {
-            const expectedType = typeof structure[key];
-            const actualType = typeof value;
-
-            if (expectedType !== actualType) {
-              throw new Error(
-                `Invalid type for ${fullPath}. Expected ${expectedType}, got ${actualType}`
-              );
-            }
-
-            return true;
-          })
-      );
-    }
-  }
-
-  return rules;
-}
 
 const haveSameStructure= (obj1, obj2)=> {
   if (typeof obj1 !== "object" || typeof obj2 !== "object") {
@@ -195,8 +163,8 @@ router.post("/apick/:id/:endpoint", (req, res) => {
               },
               { $push: { docs: newObject } }
             )
-            .then(() => {
-              res.json({ status: true });
+            .then((data) => {
+              res.json(data);
             })
             .catch((err) => {
               res.json("Failed petition");
