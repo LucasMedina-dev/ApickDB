@@ -9,6 +9,7 @@ const port = process.env.port || 3000;
 const usersRoutes= require('./routes/users')
 const endpointRoutes= require('./routes/endpoint')
 const apiRoutes= require('./routes/apiData')
+const customRoutes= require('./routes/custom')
 
 //middleware
 app.use(express.json())
@@ -16,6 +17,7 @@ app.use(express.urlencoded({extended:false}))
 app.use('/api', usersRoutes)
 app.use('/api', endpointRoutes)
 app.use('/api', apiRoutes)
+app.use('/api', customRoutes)
 
 app.use(cors())
 
