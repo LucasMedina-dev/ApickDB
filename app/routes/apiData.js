@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 const apiSchema = require("../models/apiSchema");
 const endpointSchema = require("../models/endpointSchema");
+const customSchema = require("../models/customSchema");
 const { ObjectId } = require("mongodb");
-const { body, validationResult } = require("express-validator");
 
 router.post("/apick", (req, res) => {
   const api = apiSchema(req.body);
@@ -19,17 +19,62 @@ router.get("/apick", (req, res) => {
   });
 });
 
+const getCustoms = (id, method) => {
+  return new Promise((resolve) => {
+    customSchema
+      .findOne({ idEndpoint: id, method: method })
+      .then((data) => {
+        return resolve(data);
+      })
+      .catch((err) => {
+        return err;
+      });
+  });
+};
+
+const getEndpointId = (title, endpoint, method) => {
+  return new Promise((resolve) => {
+    endpointSchema
+      .findOne(
+        {
+          title: title,
+          endpoint: endpoint,
+          active: true,
+          methods: method,
+        },
+        { _id: 1 }
+      )
+      .then((data) => {
+        let objectId = data._id;
+        let id = objectId.toString();
+        return id;
+      })
+      .then(async (id) => {
+        let customs = await getCustoms(id, "GET");
+        return resolve(customs);
+      })
+      .catch((err) => {
+        return false;
+      });
+  });
+};
+
 router.get("/apick/:id/:endpoint", (req, res) => {
   const id = req.params.id;
   const endpoint = req.params.endpoint;
+  const queries = req.query;
   apiSchema
     .find({ _id: id, "endpoint.endpoint": endpoint, active: true })
-    .then((data) => {
+    .then(async (data) => {
       const endpointContainsMethod = data[0].endpoint.find((e) =>
         e.methods.find((e) => e === "GET")
       );
+
       if (endpointContainsMethod) {
-        endpointSchema
+        let id = getEndpointId(data[0].title, endpoint, "GET");
+        id.then((customs)=>{
+
+          endpointSchema
           .find({
             title: data[0].title,
             endpoint: endpoint,
@@ -42,12 +87,14 @@ router.get("/apick/:id/:endpoint", (req, res) => {
           .catch((err) => {
             res.json(err);
           });
+        })
+        
       } else {
-        res.json({ message: "denied request" });
+        res.json({ message: "denied request   1" });
       }
     })
     .catch(() => {
-      res.json({ message: "denied request" });
+      res.json({ message: "denied request  2" });
     });
 });
 router.put("/apick/:id", (req, res) => {
@@ -107,8 +154,7 @@ router.put("/apick", (req, res) => {
     .catch((err) => console.log("error" + err));
 });
 
-
-const haveSameStructure= (obj1, obj2)=> {
+const haveSameStructure = (obj1, obj2) => {
   if (typeof obj1 !== "object" || typeof obj2 !== "object") {
     return false;
   }
@@ -133,7 +179,7 @@ const haveSameStructure= (obj1, obj2)=> {
   }
 
   return true;
-}
+};
 
 router.post("/apick/:id/:endpoint", (req, res) => {
   const id = req.params.id;
@@ -148,7 +194,7 @@ router.post("/apick/:id/:endpoint", (req, res) => {
       .then((endpointData) => {
         struct = endpointData.docs[0];
         delete req.body._id;
-        delete struct._id
+        delete struct._id;
         let validation = haveSameStructure(req.body, struct);
         if (validation) {
           const newObject = req.body;
