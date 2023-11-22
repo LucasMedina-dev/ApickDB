@@ -10,6 +10,7 @@ const usersRoutes= require('./routes/users')
 const endpointRoutes= require('./routes/endpoint')
 const apiRoutes= require('./routes/apiData')
 const customRoutes= require('./routes/custom')
+const keyRoutes= require('./routes/keys')
 
 //middleware
 app.use(express.json())
@@ -18,6 +19,7 @@ app.use('/api', usersRoutes)
 app.use('/api', endpointRoutes)
 app.use('/api', apiRoutes)
 app.use('/api', customRoutes)
+app.use('/api', keyRoutes)
 
 app.use(cors())
 
