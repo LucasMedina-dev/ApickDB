@@ -58,43 +58,70 @@ const getEndpointId = (title, endpoint, method) => {
       });
   });
 };
+const getRandomElements = (array, count) => {
+  const randomArray = [...array];
+  const randomElements = [];
+
+  if (count > array.length) {
+    console.error("Requested count is greater than the array length.");
+    return randomElements;
+  }
+
+  for (let i = 0; i < count; i++) {
+    const randomIndex = Math.floor(Math.random() * randomArray.length);
+    const randomElement = randomArray.splice(randomIndex, 1)[0];
+    randomElements.push(randomElement);
+  }
+
+  return randomElements;
+};
 
 router.get("/apick/:id/:endpoint", (req, res) => {
   const id = req.params.id;
   const endpoint = req.params.endpoint;
   const queries = req.query;
+  const noLimit = 2147483647;
+  let projection = {
+    _id: 0,
+    "docs.$": 1,
+  };
   apiSchema
-    .find({ _id: id, "endpoint.endpoint": endpoint, active: true })
-    .then(async (data) => {
-      const endpointContainsMethod = data[0].endpoint.find((e) =>
-        e.methods.find((e) => e === "GET")
+    .findOne({ _id: id, "endpoint.endpoint": endpoint, active: true })
+    .then((data) => {
+      const endpointContainsMethod = data.endpoint.find(
+        (e) => e.endpoint === endpoint && e.methods.find((x) => x === "GET")
       );
-
+      let searchFilter = {
+        title: data.title,
+        endpoint: endpoint,
+        active: true,
+        methods: "GET",
+        docs: { $elemMatch: queries },
+      };
       if (endpointContainsMethod) {
-        let id = getEndpointId(data[0].title, endpoint, "GET");
-        id.then((customs)=>{
-
+        let id = getEndpointId(data.title, endpoint, "GET");
+        id.then((customs) => {
+          let limit = customs.limitDocuments;
+          let random = customs.randomResponse;
+          let projectionStatus = customs.queryParameters && queries.length;
           endpointSchema
-          .find({
-            title: data[0].title,
-            endpoint: endpoint,
-            active: true,
-            methods: "GET",
-          })
-          .then((endpointData) => {
-            res.json(endpointData[0].docs);
-          })
-          .catch((err) => {
-            res.json(err);
-          });
-        })
-        
+            .find(searchFilter, projectionStatus ? projection : {})
+            .limit(limit ? limit : noLimit)
+            .then((endpointData) => {
+              let docs = endpointData[0].docs.slice(0, limit || noLimit);
+              random ? (docs = getRandomElements(docs, docs.length)) : false;
+              res.json(docs);
+            })
+            .catch((err) => {
+              res.json(err);
+            });
+        });
       } else {
-        res.json({ message: "denied request   1" });
+        res.json({ message: "Method not allowed" });
       }
     })
     .catch(() => {
-      res.json({ message: "denied request  2" });
+      res.json({ message: "Failed attempt to find api" });
     });
 });
 router.put("/apick/:id", (req, res) => {
@@ -210,13 +237,17 @@ router.post("/apick/:id/:endpoint", (req, res) => {
               { $push: { docs: newObject } }
             )
             .then((data) => {
-              res.json(data);
+              if(data.modifiedCount){
+                res.json({inserted:true})
+              }else{
+                res.json({ message: "Method not allowed" });
+              }
             })
             .catch((err) => {
               res.json("Failed petition");
             });
         } else {
-          res.status(400).json({ error: "request body error" });
+          res.json({ error: "Request body error" });
         }
       });
   });
