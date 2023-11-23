@@ -121,8 +121,7 @@ router.get("/apick/:id/:endpoint", (req, res) => {
               id.then((customs) => {
                 let limit = customs ? customs.limitDocuments : noLimit;
                 let random = customs ? customs.randomResponse : false;
-                let projectionStatus =
-                  (customs ? customs.queryParameters : true) && queries.length;
+                let projectionStatus =(customs.queryParameters && Object.keys(queries).length>0) ? true : false;
                 endpointSchema
                   .find(searchFilter, projectionStatus ? projection : {})
                   .limit(limit)
@@ -131,6 +130,7 @@ router.get("/apick/:id/:endpoint", (req, res) => {
                     random
                       ? (docs = getRandomElements(docs, docs.length))
                       : false;
+                      
                     res.json(docs);
                   })
                   .catch((err) => {
