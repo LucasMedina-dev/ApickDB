@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// Define el subdocumento "method"
 const methodsSchema = new mongoose.Schema({
     method: {
         type: String,
