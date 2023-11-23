@@ -4,13 +4,18 @@ const apiSchema = require("../models/apiSchema");
 const endpointSchema = require("../models/endpointSchema");
 const customSchema = require("../models/customSchema");
 const { ObjectId } = require("mongodb");
+const keySchema = require("../models/keySchema");
 
 router.post("/apick", (req, res) => {
   const api = apiSchema(req.body);
   api
     .save()
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
+    .then((data) => {
+      res.json(data);
+    })
+    .catch((err) => {
+      res.json({ message: err });
+    });
 });
 
 router.get("/apick", (req, res) => {
@@ -77,6 +82,7 @@ const getRandomElements = (array, count) => {
 };
 
 router.get("/apick/:id/:endpoint", (req, res) => {
+  const API_KEY = req.get("authorization");
   const id = req.params.id;
   const endpoint = req.params.endpoint;
   const queries = req.query;
@@ -85,43 +91,62 @@ router.get("/apick/:id/:endpoint", (req, res) => {
     _id: 0,
     "docs.$": 1,
   };
-  apiSchema
-    .findOne({ _id: id, "endpoint.endpoint": endpoint, active: true })
-    .then((data) => {
-      const endpointContainsMethod = data.endpoint.find(
-        (e) => e.endpoint === endpoint && e.methods.find((x) => x === "GET")
-      );
-      let searchFilter = {
-        title: data.title,
-        endpoint: endpoint,
-        active: true,
-        methods: "GET",
-        docs: { $elemMatch: queries },
-      };
-      if (endpointContainsMethod) {
-        let id = getEndpointId(data.title, endpoint, "GET");
-        id.then((customs) => {
-          let limit = customs.limitDocuments;
-          let random = customs.randomResponse;
-          let projectionStatus = customs.queryParameters && queries.length;
-          endpointSchema
-            .find(searchFilter, projectionStatus ? projection : {})
-            .limit(limit ? limit : noLimit)
-            .then((endpointData) => {
-              let docs = endpointData[0].docs.slice(0, limit || noLimit);
-              random ? (docs = getRandomElements(docs, docs.length)) : false;
-              res.json(docs);
-            })
-            .catch((err) => {
-              res.json(err);
-            });
-        });
-      } else {
-        res.json({ message: "Method not allowed" });
-      }
+  let authorized;
+  keySchema
+    .findOne({ apiId: id })
+    .then((result) => {
+      authorized =
+        !result.keyEnabled ||
+        result.keys.find((e) => e.key === API_KEY) ||
+        false;
     })
-    .catch(() => {
-      res.json({ message: "Failed attempt to find api" });
+    .then(() => {
+      if (authorized) {
+        apiSchema
+          .findOne({ _id: id, "endpoint.endpoint": endpoint, active: true })
+          .then((data) => {
+            const endpointContainsMethod = data.endpoint.find(
+              (e) =>
+                e.endpoint === endpoint && e.methods.find((x) => x === "GET")
+            );
+            let searchFilter = {
+              title: data.title,
+              endpoint: endpoint,
+              active: true,
+              methods: "GET",
+              docs: { $elemMatch: queries },
+            };
+            if (endpointContainsMethod) {
+              let id = getEndpointId(data.title, endpoint, "GET");
+              id.then((customs) => {
+                let limit = customs ? customs.limitDocuments : noLimit;
+                let random = customs ? customs.randomResponse : false;
+                let projectionStatus =
+                  (customs ? customs.queryParameters : true) && queries.length;
+                endpointSchema
+                  .find(searchFilter, projectionStatus ? projection : {})
+                  .limit(limit)
+                  .then((endpointData) => {
+                    let docs = endpointData[0].docs.slice(0, limit || noLimit);
+                    random
+                      ? (docs = getRandomElements(docs, docs.length))
+                      : false;
+                    res.json(docs);
+                  })
+                  .catch((err) => {
+                    res.json(err);
+                  });
+              });
+            } else {
+              res.json({ message: "Method not allowed" });
+            }
+          })
+          .catch(() => {
+            res.json({ message: "Failed attempt to find api" });
+          });
+      } else {
+        res.json({ message: "Private resource" });
+      }
     });
 });
 router.put("/apick/:id", (req, res) => {
@@ -209,48 +234,63 @@ const haveSameStructure = (obj1, obj2) => {
 };
 
 router.post("/apick/:id/:endpoint", (req, res) => {
+  const API_KEY = req.get("authorization");
   const id = req.params.id;
   const endpoint = req.params.endpoint;
   let struct;
   let apiTitle;
-
-  apiSchema.findOne({ _id: id, active: true }).then((data) => {
-    apiTitle = data.title;
-    endpointSchema
-      .findOne({ title: apiTitle, endpoint: endpoint })
-      .then((endpointData) => {
-        struct = endpointData.docs[0];
-        delete req.body._id;
-        delete struct._id;
-        let validation = haveSameStructure(req.body, struct);
-        if (validation) {
-          const newObject = req.body;
-
+  let authorized;
+  keySchema
+    .findOne({ apiId: id })
+    .then((result) => {
+      authorized =
+        !result.keyEnabled ||
+        result.keys.find((e) => e.key === API_KEY) ||
+        false;
+    })
+    .then(() => {
+      if (authorized) {
+        apiSchema.findOne({ _id: id, active: true }).then((data) => {
+          apiTitle = data.title;
           endpointSchema
-            .updateOne(
-              {
-                title: apiTitle,
-                endpoint: endpoint,
-                active: true,
-                methods: "POST",
-              },
-              { $push: { docs: newObject } }
-            )
-            .then((data) => {
-              if(data.modifiedCount){
-                res.json({inserted:true})
-              }else{
-                res.json({ message: "Method not allowed" });
+            .findOne({ title: apiTitle, endpoint: endpoint })
+            .then((endpointData) => {
+              struct = endpointData.docs[0];
+              delete req.body._id;
+              delete struct._id;
+              let validation = haveSameStructure(req.body, struct);
+              if (validation) {
+                const newObject = req.body;
+
+                endpointSchema
+                  .updateOne(
+                    {
+                      title: apiTitle,
+                      endpoint: endpoint,
+                      active: true,
+                      methods: "POST",
+                    },
+                    { $push: { docs: newObject } }
+                  )
+                  .then((data) => {
+                    if (data.modifiedCount) {
+                      res.json({ inserted: true });
+                    } else {
+                      res.json({ message: "Method not allowed" });
+                    }
+                  })
+                  .catch((err) => {
+                    res.json("Failed petition");
+                  });
+              } else {
+                res.json({ error: "Request body error" });
               }
-            })
-            .catch((err) => {
-              res.json("Failed petition");
             });
-        } else {
-          res.json({ error: "Request body error" });
-        }
-      });
-  });
+        });
+      } else {
+        res.json({ message: "Private resource" });
+      }
+    });
 });
 
 module.exports = router;

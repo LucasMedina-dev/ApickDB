@@ -17,13 +17,20 @@ function generateRandomApiKey(length) {
 }
 // hacer la ruta POST para guardar una nueva estructura para las api
 router.post("/keys", (req, res) => {
-  const newKey = keySchema(req.body);
+  const body = {
+    apiId: req.body.apiId,
+    keyEnabled: true,
+    keys: []
+  };
+  const newKey = keySchema(body);
   newKey
     .save()
     .then((result) => {
       res.json(result);
+      console.log(result)
     })
     .catch((err) => {
+        console.log(err)
       res.json(err);
     });
 });
@@ -103,10 +110,10 @@ router.put("/keys/:apiId", (req, res) => {
   keySchema
     .updateOne({ apiId: apiId }, { keyEnabled: actualization })
     .then((result) => {
-      if(result.modifiedCount){
-        res.json({modified:true})
-      }else{
-        res.json({modified:false})
+      if (result.modifiedCount) {
+        res.json({ modified: true });
+      } else {
+        res.json({ modified: false });
       }
     })
     .catch(() => {

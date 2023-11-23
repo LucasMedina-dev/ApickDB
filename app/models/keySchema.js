@@ -1,18 +1,16 @@
 const mongoose = require("mongoose");
 const keys = new mongoose.Schema({
   user: {
-    type: String,
-    unique: true
+    type: String
   },
   key: {
-    type: String,
-    unique: true
+    type: String
   },
 });
 const keySchema = mongoose.Schema({
-  apiId: { type: String, required: true, unique: true },
+  apiId: { type: String, required: true},
   keyEnabled: { type: Boolean, required: true },
-  keys: { type: [keys], required: true, unique: true },
+  keys: { type: [keys]},
 });
 
 module.exports = mongoose.model("keys", keySchema);
