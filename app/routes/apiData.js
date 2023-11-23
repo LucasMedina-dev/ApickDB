@@ -175,37 +175,39 @@ router.delete("/apick", (req, res) => {
     res.json({ message: "not a valid title" });
   }
 });
-router.put("/apick", (req, res) => {
-  const dataOriginal = { ...req.body.apickDataOriginal };
-  const dataModified = { ...req.body.apickDataModified };
-  const originalTitle = dataOriginal.title;
-  delete dataOriginal._id;
-  delete dataModified._id;
-  let i = 0;
-  for (analized of dataOriginal.endpoint) {
-    let endpointOriginal = analized.endpoint;
-    let newEndpoint = {
-      ...dataModified.endpoint[i],
-      title: dataModified.title,
-    };
-    const actualization = { $set: newEndpoint };
-    endpointSchema
-      .updateOne(
+router.put("/apick", async (req, res) => {
+  try {
+    const dataOriginal = { ...req.body.apickDataOriginal };
+    const dataModified = { ...req.body.apickDataModified };
+    const originalTitle = dataOriginal.title;
+    delete dataOriginal._id;
+    delete dataModified._id;
+
+    const promises = dataOriginal.endpoint.map(async (analized, i) => {
+      const endpointOriginal = analized.endpoint;
+      const newEndpoint = {
+        ...dataModified.endpoint[i],
+        title: dataModified.title,
+      };
+      const actualization = { $set: newEndpoint };
+
+      await endpointSchema.updateOne(
         { title: originalTitle, endpoint: endpointOriginal },
         actualization
-      )
-      .then()
-      .catch((err) => console.log("error" + err));
-    i++;
+      );
+    });
+
+    await Promise.all(promises);
+
+    const actualization = { $set: dataModified };
+    const result = await apiSchema.updateOne({ title: originalTitle }, actualization);
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-
-  const actualization = { $set: dataModified };
-  apiSchema
-    .updateOne({ title: originalTitle }, actualization)
-    .then((data) => res.json(data))
-    .catch((err) => console.log("error" + err));
 });
-
 const haveSameStructure = (obj1, obj2) => {
   if (typeof obj1 !== "object" || typeof obj2 !== "object") {
     return false;
