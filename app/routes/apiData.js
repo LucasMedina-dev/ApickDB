@@ -117,7 +117,7 @@ router.get("/apick/:id/:endpoint", (req, res) => {
             if (endpointContainsMethod) {
               let id = getEndpointId(data.title, endpoint, "GET");
               id.then((customs) => {
-                let limit = customs ? (customs.limitDocuments ? limit : noLimit) : noLimit;
+                let limit = customs ? (customs.limitDocuments ? customs.limitDocuments : noLimit) : noLimit;
                 let random = customs ? customs.randomResponse : false;
                 let projectionStatus =customs? ((customs.queryParameters && Object.keys(queries).length>0) ? true : false) : false;
                 endpointSchema
