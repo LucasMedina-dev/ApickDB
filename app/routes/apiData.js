@@ -66,9 +66,7 @@ const getEndpointId = (title, endpoint, method) => {
 const getRandomElements = (array, count) => {
   const randomArray = [...array];
   const randomElements = [];
-
   if (count > array.length) {
-    console.error("Requested count is greater than the array length.");
     return randomElements;
   }
 
@@ -82,7 +80,7 @@ const getRandomElements = (array, count) => {
 };
 
 router.get("/apick/:id/:endpoint", (req, res) => {
-  const API_KEY = req.get("authorization");
+  const API_KEY = req.get("Authorization");
   const id = req.params.id;
   const endpoint = req.params.endpoint;
   const queries = req.query;
@@ -119,18 +117,19 @@ router.get("/apick/:id/:endpoint", (req, res) => {
             if (endpointContainsMethod) {
               let id = getEndpointId(data.title, endpoint, "GET");
               id.then((customs) => {
-                let limit = customs ? customs.limitDocuments : noLimit;
+                let limit = customs ? (customs.limitDocuments ? limit : noLimit) : noLimit;
                 let random = customs ? customs.randomResponse : false;
-                let projectionStatus =(customs.queryParameters && Object.keys(queries).length>0) ? true : false;
+                let projectionStatus =customs? ((customs.queryParameters && Object.keys(queries).length>0) ? true : false) : false;
                 endpointSchema
                   .find(searchFilter, projectionStatus ? projection : {})
-                  .limit(limit)
                   .then((endpointData) => {
-                    let docs = endpointData[0].docs.slice(0, limit || noLimit);
-                    random
-                      ? (docs = getRandomElements(docs, docs.length))
+                    
+                    let docs = endpointData[0].docs;
+                    if(limit<docs.length){
+                      random
+                      ? (docs = getRandomElements(docs, limit))
                       : false;
-                      
+                    }
                     res.json(docs);
                   })
                   .catch((err) => {
@@ -179,18 +178,27 @@ router.put("/apick", async (req, res) => {
   try {
     const dataOriginal = { ...req.body.apickDataOriginal };
     const dataModified = { ...req.body.apickDataModified };
-    const originalTitle = dataOriginal.title;
+    let originalTitle = dataOriginal.title;
     delete dataOriginal._id;
     delete dataModified._id;
-
+    if(dataOriginal.title === dataModified.title){
+      delete dataOriginal.title
+      delete dataModified.title
+    }
     const promises = dataOriginal.endpoint.map(async (analized, i) => {
       const endpointOriginal = analized.endpoint;
-      const newEndpoint = {
+      console.log(endpointOriginal)
+      let newEndpoint = {
         ...dataModified.endpoint[i],
         title: dataModified.title,
       };
+      
+      if(originalTitle === dataModified.title){
+        newEndpoint = {
+          ...dataModified.endpoint[i]
+        };
+      }
       const actualization = { $set: newEndpoint };
-
       await endpointSchema.updateOne(
         { title: originalTitle, endpoint: endpointOriginal },
         actualization
@@ -236,7 +244,7 @@ const haveSameStructure = (obj1, obj2) => {
 };
 
 router.post("/apick/:id/:endpoint", (req, res) => {
-  const API_KEY = req.get("authorization");
+  const API_KEY = req.get("Authorization");
   const id = req.params.id;
   const endpoint = req.params.endpoint;
   let struct;
