@@ -16,7 +16,7 @@ const keyRoutes= require('./routes/keys')
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Headers', 'authorization, Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Origin', '*'); // Cambia '*' por el dominio permitido si es conocido
   next();
