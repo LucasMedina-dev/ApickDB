@@ -15,23 +15,24 @@ const keyRoutes= require('./routes/keys')
 //middleware
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
+app.use(cors({
+  origin: '*',
+  methods: 'GET,PUT,POST,DELETE',
+  credentials: true,
+  optionsSuccessStatus: 204,
+}))
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Origin', '*'); // Cambia '*' por el dominio permitido si es conocido
+  res.header('Access-Control-Allow-Origin', '*');
   next();
 });
-app.use(cors())
+
 app.use('/api', usersRoutes)
 app.use('/api', endpointRoutes)
 app.use('/api', apiRoutes)
 app.use('/api', customRoutes)
 app.use('/api', keyRoutes)
-
-
-
-
-
 
 mongoose.connect(process.env.MONGODB_URI)
 .then(()=>console.log('Connected to MongoDB'))
