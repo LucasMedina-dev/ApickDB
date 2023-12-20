@@ -4,6 +4,13 @@ const cors= require('cors')
 require('dotenv').config();
 const app= express();
 const port = process.env.port || 3000;
+const corsMiddleware=(req, res, next, ) => {
+  const origin=req.headers.origin
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
+  origin==='http://localhost:4200' ? next() : res.status(403).json({error:"Forbidden"})
+}
 
 //routes
 const usersRoutes= require('./routes/users')
@@ -15,24 +22,15 @@ const keyRoutes= require('./routes/keys')
 //middleware
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
-app.use(cors({
-  origin: '*',
-  methods: 'GET,PUT,POST,DELETE',
-  credentials: true,
-  optionsSuccessStatus: 204,
-}))
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Origin', '*');
-  next();
-});
-
-app.use('/api', usersRoutes)
-app.use('/api', endpointRoutes)
+app.use(cors())
 app.use('/api', apiRoutes)
-app.use('/api', customRoutes)
-app.use('/api', keyRoutes)
+app.use(corsMiddleware)
+app.use('/api', corsMiddleware, endpointRoutes)
+app.use('/api', corsMiddleware, usersRoutes)
+app.use('/api', corsMiddleware, customRoutes)
+app.use('/api', corsMiddleware, keyRoutes)
+
+
 
 mongoose.connect(process.env.MONGODB_URI)
 .then(()=>console.log('Connected to MongoDB'))

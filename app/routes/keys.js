@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const keySchema = require("../models/keySchema");
-const { ObjectId } = require("mongodb");
 
+// -------------------------------------------------------------------------------------------------------------------------------EXTRA FUNCTIONS
 function generateRandomApiKey(length) {
   const characters =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -15,109 +15,100 @@ function generateRandomApiKey(length) {
 
   return apiKey;
 }
-// hacer la ruta POST para guardar una nueva estructura para las api
-router.post("/keys", (req, res) => {
+
+// ------------------------------------------------------------------------------------------------------------------------------ROUTE /REGISTER
+const createKey = async (req, res) => {
   const body = {
     apiId: req.body.apiId,
     keyEnabled: true,
     keys: []
   };
-  const newKey = keySchema(body);
-  newKey
-    .save()
-    .then((result) => {
-      res.json(result);
-      console.log(result)
-    })
-    .catch((err) => {
-        console.log(err)
-      res.json(err);
-    });
-});
-router.post("/keys/:apiId", async (req, res) => {
+  try {
+    const saveKey = await keySchema(body).save()
+    res.json(saveKey)
+  } catch (error) {
+    console.error(error);
+    res.status(error.statusCode).json({ message: "Failed to create register for keys." });
+  }
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------ROUTE /REGISTER
+const generateKey = async (req, res) => {
   try {
     const apiId = req.params.apiId;
     const username = req.body.username;
     if (req.body.username) {
-      const key = generateRandomApiKey(32);
-      const existingKey = await keySchema
-        .findOne({
-          apiId: apiId,
-          "keys.user": username,
-        })
-        .then((result) => {
-          let finded = result
-            ? result.keys.find((e) => e.user === username)
-            : false;
-          return finded;
-        });
-
-      if (existingKey) {
-        return res.json(existingKey);
+      const randomKey = generateRandomApiKey(32);
+      const findedKey = await keySchema.findOne({ apiId: apiId, "keys.user": username })
+      const finded = findedKey ? findedKey.keys.find((e) => e.user === username) : false;
+      if (finded) {
+        res.json(finded);
       }
-      const newKey = { user: username, key: key };
-      await keySchema.updateOne({ apiId: apiId }, { $push: { keys: newKey } });
-
-      res.json(newKey);
+      const newKey = { user: username, key: randomKey };
+      try {
+        await keySchema.updateOne({ apiId: apiId }, { $push: { keys: newKey } });
+        res.json(newKey);
+      } catch (error) {
+        console.error(error);
+        res.status(error.statusCode).json({ message: "Failed to generate a new key." });
+      }
     } else {
-      keySchema
-        .findOne({ apiId: apiId })
-        .then((result) => {
-          res.json({ keyEnabled: result.keyEnabled });
-        })
-        .catch((error) => {
-          console.error(error);
-          res.status(500).json({ error: "Key not created" });
-        });
+      try {
+        const key = await keySchema.findOne({ apiId: apiId })
+        res.json({ keyEnabled: key.keyEnabled });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Key not finded." });
+      }
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Key not created" });
+    res.status(error.statusCode).json({ message: "Failed to find a key." });
   }
-});
-// hacer la ruta GET para obtener una key segun username, si no existe, la crea
-
-// hacer la ruta GET para obtener si apiKey esta activado
-// Se puede pasar por parametro username y va buscar la key
-router.get("/keys/:apiId", (req, res) => {
-  const apiId = req.params.apiId;
-  const username = req.query.username;
-  keySchema
-    .findOne({ apiId: apiId, keyEnabled: true })
-    .then((result) => {
-      const apiKey = username
-        ? result.keys.find((e) => e.user === username)
-        : false;
-      if (apiKey) {
-        res.json({
-          keyEnabled: result.keyEnabled,
-          username: username,
-          apiKey: apiKey,
-        });
-      } else {
-        res.json({ keyEnabled: result.keyEnabled });
-      }
-    })
-    .catch(() => {
-      res.json({ error: "Api id not finded" });
-    });
-});
-
-// hacer la ruta PUT para actualizar el apikey true o false
-router.put("/keys/:apiId", (req, res) => {
+}
+const getKey = async (req, res) => {
+  try {
+    const apiId = req.params.apiId;
+    const username = req.query.username;
+    const result = await keySchema.findOne({ apiId: apiId })
+    const apiKey = username
+      ? result.keys.find((e) => e.user === username)
+      : false;
+    if (apiKey) {
+      res.json({
+        keyEnabled: result.keyEnabled,
+        username: username,
+        apiKey: apiKey
+      });
+    } else {
+      res.json({ keyEnabled: result.keyEnabled });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(error.statusCode).json({ message: "Failed to get key" });
+  }
+}
+const switchRequiredKey = async (req, res) => {
   let apiId = req.params.apiId;
   let actualization = req.body.keyEnabled;
-  keySchema
-    .updateOne({ apiId: apiId }, { keyEnabled: actualization })
-    .then((result) => {
-      if (result.modifiedCount) {
-        res.json({ modified: true });
-      } else {
-        res.json({ modified: false });
-      }
-    })
-    .catch(() => {
-      res.json({ error: "Api id not finded" });
-    });
-});
+  try {
+    const result = await keySchema.updateOne({ apiId: apiId }, { keyEnabled: actualization })
+    if (result.modifiedCount) {
+      res.json({ modified: true });
+    } else {
+      res.json({ modified: false });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(error.statusCode).json({ message: "Failed to switch keyEnabled." });
+  }
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------ROUTES
+
+router.post("/keys", createKey);
+router.post("/keys/:apiId", generateKey);
+router.get("/keys/:apiId", getKey);
+router.put("/keys/:apiId", switchRequiredKey);
+
 module.exports = router;

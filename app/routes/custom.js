@@ -3,7 +3,8 @@ const router = express.Router();
 const customSchema = require("../models/customSchema");
 const { ObjectId } = require("mongodb");
 
-router.get("/custom", (req, res) => {
+// ------------------------------------------------------------------------------------------------------------------------------ROUTE /CUSTOM
+const getCustom=async (req, res) => {
   let id = req.query.id;
   let method = req.query.method;
   const newCustom = customSchema({
@@ -13,37 +14,37 @@ router.get("/custom", (req, res) => {
     limitDocuments: 0,
     randomResponse: false,
   });
-  customSchema
-    .findOne({ idEndpoint: id, method: method })
-    .then((data) => {
-      if (!data) {
-        newCustom
-          .save()
-          .then((data) => res.json(data))
-          .catch((err) =>
-            res
-              .status(400)
-              .json({ message: "Failed attempt to save new custom data" })
-          );
-      } else {
-        res.json(data);
-      }
-    })
-    .catch(() => {
-      res.status(400).json({ message: "Can't find document" });
-    });
-});
-router.put("/custom/:id", (req, res) => {
+  try {
+    const findCustom = await customSchema.findOne({ idEndpoint: id, method: method })
+    if (!findCustom) {
+      const newCustomData = await newCustom.save()
+      res.json(newCustomData)
+    } else {
+      res.json(findCustom);
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(error.statusCode).json({ message: "Failed to get custom." });
+  }
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------ROUTE /CUSTOM/:ID
+const updateCustom= async (req, res) => {
   const id = req.params.id;
   const customizerData = req.body;
   const objectId = new ObjectId(id);
-  customSchema
-    .updateOne({ _id: objectId }, { $set: customizerData })
-    .then((data) => {
-      res.json(data);
-    })
-    .catch(() => {
-      res.status(400).json({ message: "Can't save document" });
-    });
-});
+  try {
+    const data = await customSchema.updateOne({ _id: objectId }, { $set: customizerData })
+    res.json(data)
+  } catch (error) {
+    console.error(error);
+    res.status(error.statusCode).json({ message: "Failed to update custom." });
+  }
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------ROUTES
+
+router.get("/custom", getCustom);
+router.put("/custom/:id", updateCustom);
+
 module.exports = router;
