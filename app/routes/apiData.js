@@ -5,12 +5,13 @@ const endpointSchema = require("../models/endpointSchema");
 const customSchema = require("../models/customSchema");
 const { ObjectId } = require("mongodb");
 const keySchema = require("../models/keySchema");
+const URL="https://apick.vercel.app/"
 const corsMiddleware=(req, res, next, ) => {
   const origin=req.headers.origin
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-  res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
-  origin==='http://localhost:4200' ? next() : res.status(403).json({error:"Forbidden"})
+  res.header('Access-Control-Allow-Origin', URL);
+  origin===URL ? next() : res.status(403).json({error:"Forbidden"})
 }
 const everyCanUse=(req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
